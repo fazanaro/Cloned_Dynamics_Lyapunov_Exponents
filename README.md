@@ -26,20 +26,17 @@ The Cloned Dynamics approach was used do develop some works. The main results we
 To cite the Cloned Dynamics approach, please use the following:
 
 > @ARTICLE{article:SorianoFazanaro2012,
-
 > author = {Soriano, D. C. and Fazanaro, F. I. and Suyama, R. and Oliveira, J. R. and Attux, R. and Madrid, M. K.},
-
 > title = {{A method for Lyapunov spectrum estimation using cloned dynamics and its application to the discontinuously-excited FitzHugh-Nagumo model}},
-
 > journal = {Nonlinear Dynamics},
-    year = {2012},
-    volume = {67},
-    pages = {413--424},
-    number = {1},
-    month = {Jan},
-    doi = {10.1007/s11071-011-9989-2},
-    publisher = {Springer Netherlands}
-}
+> year = {2012},
+> volume = {67},
+> pages = {413--424},
+> number = {1},
+> month = {Jan},
+> doi = {10.1007/s11071-011-9989-2},
+> publisher = {Springer Netherlands}
+> }
 
 
 If any other work was helpfull to you research, the following bibitex citations could be usefull:
