@@ -25,6 +25,7 @@ The Cloned Dynamics approach was used do develop some works. The main results we
 
 To cite the Cloned Dynamics approach, please use the following:
 
+<?
 @ARTICLE{article:SorianoFazanaro2012,
   author = {Soriano, D. C. and Fazanaro, F. I. and Suyama, R. and Oliveira, J.
 	R. and Attux, R. and Madrid, M. K.},
@@ -40,6 +41,8 @@ To cite the Cloned Dynamics approach, please use the following:
   doi = {10.1007/s11071-011-9989-2},
   publisher = {Springer Netherlands}
 }
+?>
+
 
 
 If any other work was helpfull to you research, the following bibitex citations could be usefull:
