@@ -1,4 +1,4 @@
-# Cloned_Dynamics_Lyapunov_Exponents
+# The Cloned Dynamics Approach for Lyapunov Exponents Calculation
 
 
 ## Description
