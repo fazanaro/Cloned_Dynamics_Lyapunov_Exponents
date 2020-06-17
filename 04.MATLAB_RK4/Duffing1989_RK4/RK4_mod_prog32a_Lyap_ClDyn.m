@@ -43,7 +43,7 @@
 % DOI: 10.1007/s11071-011-9989-2.
 %% ===================================================================== %%
 
-% clc
+clc
 close all
 clear all
 
@@ -106,12 +106,12 @@ t_aux = 0;
 
 
 % Final time
-t_final = 500;
+t_final = 1000;
 
 
 % Gram-Schimidt reorthonormalization time interval
 %   - See [5] for further details related to how to change this value.
-t_gsr = 0.01
+t_gsr = 0.50;
 
 
 % Time step
