@@ -39,8 +39,8 @@
 %       - beta variation step: 4.0
 %       - beta = [70.0; 200.0]/7
 %
-%       - Total combinations = 
-%       - Total execution time [s] = 
+%       - Total combinations = 198
+%       - Total execution time [s] = 710.9524
 %
 %
 %% ===================================================================== %%
