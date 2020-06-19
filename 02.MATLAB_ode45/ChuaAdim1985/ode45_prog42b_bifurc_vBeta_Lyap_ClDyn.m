@@ -15,7 +15,7 @@
 % Author:           Filipe Ieda Fazanaro
 % Contact:          filipe.fazanaro AT ufabc.edu.br
 % Initial version:  v05.02.2013.01
-% Last update:      v18.06.2020.01
+% Last update:      v19.06.2020.01
 % ------------------------------------------------------
 %
 %% ===================================================================== %%
@@ -25,7 +25,7 @@
 %   Dynamics approach - for the Chua's circuit oscillator dynamical model 
 %   [3,4].
 %
-%   - Defines 'alpha' as the control parameter.
+%   - Defines 'beta' as the control parameter.
 %
 %   - Employs the 'ode45' integrator.
 %
@@ -33,8 +33,9 @@
 %% OBSERVATIONS
 %
 %   - Core i7 2600K 3.4GHz, MATLAB R2020a
-%       - alpha variation step: 0.01
-%       - Total execution time [s] = 777.6583
+%       - beta variation step: 1.0
+%       - beta = [70.0; 200.0]/7
+%       - Total execution time [s] = 536.5255
 %
 %
 %% ===================================================================== %%
@@ -93,8 +94,8 @@ dim_total = dim*(dim+1);
 % -------------------------------------------------------------------------
 
 % -------------------------------------------------------------------------
-%alpha = 9;
-beta  = 100/7;
+alpha = 9;
+% beta  = 100/7;
 gamma = 0;
 
 a = -8/7;
@@ -105,11 +106,11 @@ b = -5/7;
 %% CONTROL PARAMETERS
 
 % Variation step of the control parameter
-nIncControlParameter = 0.01;
+nIncControlParameter = 1;
 
 % Control parameter
-vAlpha = 7.0:nIncControlParameter:9.0;
-
+vBeta = 70.0:nIncControlParameter:200.0;
+vBeta = (1/7)*vBeta;
 
 %% ===================================================================== %%
 %% INTEGRATION PARAMETERS
@@ -136,7 +137,7 @@ nMaxItera = round( (t_final-t_init)/t_gsr );
 
 
 % Store the Lyapunov spectrum
-vBifurcLyap = 255*ones( length(vAlpha), (dim+1) );
+vBifurcLyap = 255*ones( length(vBeta), (dim+1) );
 
 
 % 'ode45' options
@@ -151,11 +152,11 @@ tbase = tic();
 % ===================================================================== %%
 %% DYNAMICAL SYSTEM INTEGRATION
 
-for iAlpha = 1:length(vAlpha)
+for iBeta = 1:length(vBeta)
     
     % ------------------------------------------------------------------- %
     
-    alpha = vAlpha(iAlpha)
+    beta = vBeta(iBeta)
     
     % ------------------------------------------------------------------- %
     
@@ -261,8 +262,8 @@ for iAlpha = 1:length(vAlpha)
     
     % ------------------------------------------------------------------- %
     
-%     vBifurcLyap(iAlpha,:) = [alpha, beta, omega, a, b, Lyap(:,end)']
-    vBifurcLyap(iAlpha,:) = [alpha, Lyap(:,end)'];
+%     vBifurcLyap(iBeta,:) = [alpha, beta, omega, a, b, Lyap(:,end)']
+    vBifurcLyap(iBeta,:) = [beta, Lyap(:,end)'];
     
     % ------------------------------------------------------------------- %
     
@@ -301,7 +302,7 @@ fprintf('Total execution time [s] = %.4f\n\n',cpuTime);
 % Uncomment as you wish
 
 % sSave = ['save <put_the_name_of_the_file_here>.mat'];
-% evAlphal(sSave);
+% evBetal(sSave);
 
 %% ===================================================================== %%
 %% PLOT
@@ -347,7 +348,7 @@ figure(1)
 %     'LineStyle','-', ...
 %     'Color',[0 0 0]);
 
-line([min(vAlpha) max(vAlpha)], [0 0], ...
+line([min(vBeta) max(vBeta)], [0 0], ...
     'Color', [0 0 0]);
 
 hold on;
@@ -362,13 +363,14 @@ hold on;
 % axis([ min(vGamma) max(vGamma) -0.6 0.3 ]);
 
 
-xlabel( '$\alpha$', 'Interpreter', 'latex' );
+xlabel( '$\beta$', 'Interpreter', 'latex' );
 ylabel( '$\lambda$', 'Interpreter', 'latex' );
+
 
 
 % Create textbox
 annotation(figure(1),'textbox',...
-    [0.318324185248713 0.814645308924485 0.057319039451115 0.068649885583524],...
+    [0.443113392668611 0.775110425203555 0.057319039451115 0.068649885583524],...
     'Color',[0 0.447058823529412 0.741176470588235],...
     'String',{'\lambda_1'},...
     'LineStyle','none',...
@@ -379,7 +381,7 @@ annotation(figure(1),'textbox',...
 
 % Create textbox
 annotation(figure(1),'textbox',...
-    [0.318324185248713 0.606407322654462 0.0573190394511151 0.068649885583524],...
+    [0.443113392668611 0.618035229631206 0.0573190394511151 0.068649885583524],...
     'Color',[0.850980392156863 0.325490196078431 0.0980392156862745],...
     'String','\lambda_2',...
     'LineStyle','none',...
@@ -390,7 +392,7 @@ annotation(figure(1),'textbox',...
 
 % Create textbox
 annotation(figure(1),'textbox',...
-    [0.318324185248713 0.508009153318078 0.0573190394511151 0.0686498855835239],...
+    [0.443113392668611 0.519637060294822 0.0573190394511151 0.0686498855835239],...
     'Color',[0.929411764705882 0.694117647058824 0.125490196078431],...
     'String','\lambda_3',...
     'LineStyle','none',...
@@ -401,7 +403,7 @@ annotation(figure(1),'textbox',...
 % ----------------------------------------------------------------------- %
 
 % Print the figure
-% sGraficoEPS = ['print -depsc2 fig_ChuaAdim1985_bifurc_Lyap_vAlpha_' num2str(vAlpha(1)) 'a' num2str(vAlpha(end)) '.eps'];
+% sGraficoEPS = ['print -depsc2 fig_ChuaAdim1985_bifurc_Lyap_vBeta_' num2str(vBeta(1)) 'a' num2str(vBeta(end)) '.eps'];
 % eval(sGraficoEPS);
 
 % ----------------------------------------------------------------------- %
@@ -413,7 +415,7 @@ figure(2)
 %     'LineStyle','-', ...
 %     'Color',[0 0 0]);
 
-line([min(vAlpha) max(vAlpha)], [0 0], ...
+line([min(vBeta) max(vBeta)], [0 0], ...
     'Color', [0 0 0]);
 
 hold on;
@@ -428,14 +430,14 @@ hold on;
 % axis([ min(vGamma) max(vGamma) -0.6 0.3 ]);
 
 
-xlabel( '$\alpha$', 'Interpreter', 'latex' );
+xlabel( '$\beta$', 'Interpreter', 'latex' );
 ylabel( '$\lambda_1$', 'Interpreter', 'latex' );
 
 % ----------------------------------------------------------------------- %
 
 % Print the figure
-% sGraficoEPS = ['print -depsc2 fig_ChuaAdim1985_bifurc_Lyap_vAlpha_' num2str(vAlpha(1)) 'a' num2str(vAlpha(end)) '.eps'];
-% evAlphal(sGraficoEPS);
+% sGraficoEPS = ['print -depsc2 fig_ChuaAdim1985_bifurc_Lyap_vBeta_' num2str(vBeta(1)) 'a' num2str(vBeta(end)) '.eps'];
+% evBetal(sGraficoEPS);
 
 % ======================================================================= %
 

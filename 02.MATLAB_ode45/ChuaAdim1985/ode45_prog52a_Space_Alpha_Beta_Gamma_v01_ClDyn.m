@@ -15,7 +15,7 @@
 % Author:           Filipe Ieda Fazanaro
 % Contact:          filipe.fazanaro AT ufabc.edu.br
 % Initial version:  v05.02.2013.01
-% Last update:      v18.06.2020.01
+% Last update:      v19.06.2020.01
 % ------------------------------------------------------
 %
 %% ===================================================================== %%
@@ -25,7 +25,7 @@
 %   Dynamics approach - for the Chua's circuit oscillator dynamical model 
 %   [3,4].
 %
-%   - Defines 'alpha' as the control parameter.
+%   - Control parameters: 'alpha' and 'beta'
 %
 %   - Employs the 'ode45' integrator.
 %
@@ -33,8 +33,14 @@
 %% OBSERVATIONS
 %
 %   - Core i7 2600K 3.4GHz, MATLAB R2020a
-%       - alpha variation step: 0.01
-%       - Total execution time [s] = 777.6583
+%       - alpha variation step: 0.4
+%       - alpha = [7.0; 9.0]
+%
+%       - beta variation step: 4.0
+%       - beta = [70.0; 200.0]/7
+%
+%       - Total combinations = 
+%       - Total execution time [s] = 
 %
 %
 %% ===================================================================== %%
@@ -93,8 +99,8 @@ dim_total = dim*(dim+1);
 % -------------------------------------------------------------------------
 
 % -------------------------------------------------------------------------
-%alpha = 9;
-beta  = 100/7;
+% alpha = 9;
+% beta  = 100/7;
 gamma = 0;
 
 a = -8/7;
@@ -105,68 +111,106 @@ b = -5/7;
 %% CONTROL PARAMETERS
 
 % Variation step of the control parameter
-nIncControlParameter = 0.01;
+nIncControlParameter1 = 0.4;
+nIncControlParameter2 = 4.0;
 
-% Control parameter
-vAlpha = 7.0:nIncControlParameter:9.0;
+
+vAlpha = 7.0:nIncControlParameter1:9.0;
+
+vBeta = 70.0:nIncControlParameter2:200;
+vBeta = vBeta/7.0;
+
+
+% Defines the meshgrid
+[mGridAlpha, mGridBeta] = meshgrid(vAlpha, vBeta);
 
 
 %% ===================================================================== %%
-%% INTEGRATION PARAMETERS
+%% INTEGRATION DEFINITIONS AND INITIAL CONDITIONS
 
 % Initial time
 t_init = 0;
 
+% Aux
+t_aux = 0;
 
 % Final time
 t_final = 1000;
 
+% Gram-Schimidt reorthonormalization time interval
+t_gsr = 0.5;
 
 % Time step
 t_step = 0.01;
-
-
-% Gram-Schimidt reorthonormalization time interval
-%   - See [1,2] for further details related to how to change this value.
-t_gsr = 0.5;
-
 
 % Maximum iteration number
 nMaxItera = round( (t_final-t_init)/t_gsr );
 
 
-% Store the Lyapunov spectrum
-vBifurcLyap = 255*ones( length(vAlpha), (dim+1) );
+% Cloned Dynamics approach aux
+deltax = zeros( dim );
 
+% Gram-Schimidt Reorthonormalization
+vk = zeros( dim );
+uk = zeros( dim );
 
 % 'ode45' options
 Options = odeset('RelTol',1e-8,'AbsTol',1e-8);
 
+
+% Memory allocation: these vectors will store the maximum (minimum)
+% Lyapunov exponents
+Mz_Lyap1 = NaN( size(mGridAlpha) );
+Mz_Lyap2 = NaN( size(mGridAlpha) );
+Mz_Lyap3 = NaN( size(mGridAlpha) );
+
+% Used during the construction of the space parameter
+mStatesLocalLyapClDyn_Lyap1 = [];
+mStatesLocalLyapClDyn_Lyap2 = [];
+mStatesLocalLyapClDyn_Lyap3 = [];
+
+
+% Aux
+Yfinal = [];
+
 %% ===================================================================== %%
 
-fprintf ( 1, '\n  Computation begun at %s.\n', datestr ( now ) );
+
+fprintf ( 1, '\n  Computation begun at %s.\n\n', datestr ( now ) );
 
 tbase = tic();
 
-% ===================================================================== %%
-%% DYNAMICAL SYSTEM INTEGRATION
 
-for iAlpha = 1:length(vAlpha)
+%% ===================================================================== %%
+%% MAIN
+
+for ij = 1:numel(mGridAlpha)
     
     % ------------------------------------------------------------------- %
+    % SCREEN
+    % ------------------------------------------------------------------- %
     
-    alpha = vAlpha(iAlpha)
+    fprintf( '%d / %d\n', ij, numel(mGridAlpha) );
     
     % ------------------------------------------------------------------- %
     
     t_aux = 0;
     
     % ------------------------------------------------------------------- %
-    % INITIAL CONDITIONS OF THE DYNAMICAL AND THE CLONED SYSTEMS
+    % PARAMETER SPACE
+    % ------------------------------------------------------------------- %
+    
+    alpha = mGridAlpha(ij);
+    
+    beta = mGridBeta(ij);
+    
+    % ------------------------------------------------------------------- %
+    % INITIAL CONDITIONS
     % ------------------------------------------------------------------- %
     
     % Cloned dynamical systems perturbation - see [2]
     delta = 1e-4;
+    
     
     % Initial conditions
     vX0 = 0.15264;
@@ -179,15 +223,9 @@ for iAlpha = 1:length(vAlpha)
     % Cloned dynamical systems initial conditions
     y_init_clon = (ones(dim,1)*y_init_orig)' + delta*eye(dim);
     
+    
     % Fiducial and clones initial conditions
     y_init = [ y_init_orig, reshape(y_init_clon',1,[])];
-    
-    
-    % ------------------------------------------------------------------- %
-    % CLONED DYNAMICS APPROACH AUX
-    % ------------------------------------------------------------------- %
-    
-    deltax = zeros( dim );
     
     % ------------------------------------------------------------------- %
     % MEMORY ALLOCATION
@@ -223,29 +261,28 @@ for iAlpha = 1:length(vAlpha)
         deltax = y_orig*ones( 1, dim ) - y_clon;
         
         % --------------------------------------------------------------- %
-        % Gram-Schimidt Reorthonormalization
+        % Gram-Schimidt reorthonormalization
         
-        [vk, uk, Normk] = GSR2(deltax, dim);
+        [vk, uk, Normk] = GSR2( deltax, dim );
         
         % --------------------------------------------------------------- %
         % Lyapunov exponents calculation
         
         for jj = 1:dim
-            if norm(vk(:,jj)) ~= 0
-                % Local exponent
-                LyapLocal(jj,ii+1) = (1/t_gsr)*log(norm(vk(:,jj))/delta);
+            if Normk(jj) ~= 0
+                % Local exponents
+                LyapLocal(jj,ii+1) = (1/t_gsr)*log(Normk(jj)/delta);
                 
                 % Local exponents summation
-                LyapSoma(jj,ii+1) = LyapSoma(jj,ii) + log(norm(vk(:,jj))/delta);
+                LyapSoma(jj,ii+1) = LyapSoma(jj,ii) + log(Normk(jj)/delta);
                 
-                % Global Lyapunov exponents
+                % Gloabl exponents
                 Lyap(jj,ii+1) = (1/(t_aux-t_init))*LyapSoma(jj,ii+1);
             end
         end
         
         % --------------------------------------------------------------- %
-        % PREPARE FOR THE NEXT ITERATION
-        % --------------------------------------------------------------- %
+        % Prepare for the next iteration
         
         % Fiducial and cloned dynamical systems initial conditions for the
         % next iteration
@@ -261,8 +298,24 @@ for iAlpha = 1:length(vAlpha)
     
     % ------------------------------------------------------------------- %
     
-%     vBifurcLyap(iAlpha,:) = [alpha, beta, omega, a, b, Lyap(:,end)']
-    vBifurcLyap(iAlpha,:) = [alpha, Lyap(:,end)'];
+    tempStatesLocalLyapClDyn_Lyap1 = [mGridAlpha(ij), mGridBeta(ij), ...
+        Lyap(:,end)', Lyap(1,end) ];%max(Lyap(:,end)) ];
+    
+    tempStatesLocalLyapClDyn_Lyap2 = [mGridAlpha(ij), mGridBeta(ij), ...
+        Lyap(:,end)', Lyap(2,end) ];
+    
+    tempStatesLocalLyapClDyn_Lyap3 = [mGridAlpha(ij), mGridBeta(ij), ...
+        Lyap(:,end)', Lyap(3,end) ];%min(Lyap(:,end)) ];
+    
+    % ------------------------------------------------------------------- %
+    
+    Mz_Lyap1(ij) = tempStatesLocalLyapClDyn_Lyap1(end,end);
+    Mz_Lyap2(ij) = tempStatesLocalLyapClDyn_Lyap2(end,end);
+    Mz_Lyap3(ij) = tempStatesLocalLyapClDyn_Lyap3(end,end);
+    
+    mStatesLocalLyapClDyn_Lyap1(ij,:) = tempStatesLocalLyapClDyn_Lyap1;
+    mStatesLocalLyapClDyn_Lyap2(ij,:) = tempStatesLocalLyapClDyn_Lyap2;
+    mStatesLocalLyapClDyn_Lyap3(ij,:) = tempStatesLocalLyapClDyn_Lyap3;
     
     % ------------------------------------------------------------------- %
     
@@ -270,25 +323,27 @@ end
 
 %% ===================================================================== %%
 
+
 fprintf ( 1, '\n  Computation completed at %s.\n', datestr ( now ) );
 
 cpuTime = toc( tbase );
 
 fprintf('Total execution time [s] = %.4f\n\n',cpuTime);
 
+
 %% ===================================================================== %%
 %% SOME USEFULL STRINGS
 
 % Uncomment as you wish
 
-% strEpsilon = ['Epsilon_' num2str( epsilon ) ];
-% strEpsilon( ismember(strEpsilon, '-') ) = 'n';
-% strEpsilon( ismember(strEpsilon, '.') ) = 'p';
+% stralpha = ['alpha_' num2str( alpha ) ];
+% stralpha( ismember(stralpha, '-') ) = 'n';
+% stralpha( ismember(stralpha, '.') ) = 'p';
 %
 %
-% strGamma = ['Gamma_' num2str( gamma ) ];
-% strGamma( ismember(strGamma, '-') ) = 'n';
-% strGamma( ismember(strGamma, '.') ) = 'p';
+% strbeta = ['beta_' num2str( beta ) ];
+% strbeta( ismember(strbeta, '-') ) = 'n';
+% strbeta( ismember(strbeta, '.') ) = 'p';
 %
 %
 % strOmega = ['Omega_' num2str( omega ) ];
@@ -340,104 +395,114 @@ MarkerSize = 2;             % MarkerSize
 
 % ----------------------------------------------------------------------- %
 
-figure(1)
+hFig1 = figure( 'visible', 'on' );
+hax1 = axes( 'Parent', hFig1, 'FontSize', FontSize );
 
-% plot(vBifurcLyap(:,1),0.0,...
-%     'Marker', '.', ...
-%     'LineStyle','-', ...
-%     'Color',[0 0 0]);
-
-line([min(vAlpha) max(vAlpha)], [0 0], ...
-    'Color', [0 0 0]);
-
-hold on;
-
-plot(vBifurcLyap(:,1),vBifurcLyap(:,2:end),...
-    'Marker','.', 'MarkerSize',2, ...
-    'LineStyle','-');
-
-hold on;
+box( hax1, 'on' );
+hold(hax1, 'all' );
+grid(hax1, 'off' );
 
 
-% axis([ min(vGamma) max(vGamma) -0.6 0.3 ]);
+surf(mGridAlpha, mGridBeta, Mz_Lyap1);
+
+
+colormap jet;
+shading interp;
+view([0 90]);
+
+
+axis([ min(vAlpha) max(vAlpha) min(vBeta) max(vBeta) ]);
+
+
+hcb = colorbar;
+colorTitleHandle = get( hcb, 'Title' );
+titleString = '\lambda_{1}';
+set( colorTitleHandle , 'String', titleString, 'FontSize', 14 );
 
 
 xlabel( '$\alpha$', 'Interpreter', 'latex' );
-ylabel( '$\lambda$', 'Interpreter', 'latex' );
-
-
-% Create textbox
-annotation(figure(1),'textbox',...
-    [0.318324185248713 0.814645308924485 0.057319039451115 0.068649885583524],...
-    'Color',[0 0.447058823529412 0.741176470588235],...
-    'String',{'\lambda_1'},...
-    'LineStyle','none',...
-    'FontSize',14,...
-    'FontName','Fira Sans',...
-    'FitBoxToText','off');
-
-
-% Create textbox
-annotation(figure(1),'textbox',...
-    [0.318324185248713 0.606407322654462 0.0573190394511151 0.068649885583524],...
-    'Color',[0.850980392156863 0.325490196078431 0.0980392156862745],...
-    'String','\lambda_2',...
-    'LineStyle','none',...
-    'FontSize',14,...
-    'FontName','Fira Sans',...
-    'FitBoxToText','off');
-
-
-% Create textbox
-annotation(figure(1),'textbox',...
-    [0.318324185248713 0.508009153318078 0.0573190394511151 0.0686498855835239],...
-    'Color',[0.929411764705882 0.694117647058824 0.125490196078431],...
-    'String','\lambda_3',...
-    'LineStyle','none',...
-    'FontSize',14,...
-    'FontName','Fira Sans',...
-    'FitBoxToText','off');
+ylabel( '$\beta$', 'Interpreter', 'latex' );
 
 % ----------------------------------------------------------------------- %
 
-% Print the figure
-% sGraficoEPS = ['print -depsc2 fig_ChuaAdim1985_bifurc_Lyap_vAlpha_' num2str(vAlpha(1)) 'a' num2str(vAlpha(end)) '.eps'];
+% Print
+% sGraficoEPS = ['print -depsc2 fig_bifurc_Lyap_vAlpha_' num2str(vAlpha(1)) 'a' num2str(vAlpha(end)) '.eps'];
 % eval(sGraficoEPS);
 
 % ----------------------------------------------------------------------- %
 
-figure(2)
+hFig2 = figure( 'visible', 'on' );
+hax2 = axes( 'Parent', hFig2, 'FontSize', FontSize );
 
-% plot(vBifurcLyap(:,1),0.0,...
-%     'Marker', '.', ...
-%     'LineStyle','-', ...
-%     'Color',[0 0 0]);
-
-line([min(vAlpha) max(vAlpha)], [0 0], ...
-    'Color', [0 0 0]);
-
-hold on;
-
-plot(vBifurcLyap(:,1),vBifurcLyap(:,2),...
-    'Marker','.', ...
-    'LineStyle','-');
-
-hold on;
+box( hax2, 'on' );
+hold(hax2, 'all' );
+grid(hax2, 'off' );
 
 
-% axis([ min(vGamma) max(vGamma) -0.6 0.3 ]);
+surf(mGridAlpha, mGridBeta, Mz_Lyap2);
+
+
+colormap jet;
+shading interp;
+view([0 90]);
+
+
+axis([ min(vAlpha) max(vAlpha) min(vBeta) max(vBeta) ]);
+
+
+hcb = colorbar;
+colorTitleHandle = get( hcb, 'Title' );
+titleString = '\lambda_{2}';
+set( colorTitleHandle , 'String', titleString, 'FontSize', 14 );
 
 
 xlabel( '$\alpha$', 'Interpreter', 'latex' );
-ylabel( '$\lambda_1$', 'Interpreter', 'latex' );
+ylabel( '$\beta$', 'Interpreter', 'latex' );
 
 % ----------------------------------------------------------------------- %
 
-% Print the figure
-% sGraficoEPS = ['print -depsc2 fig_ChuaAdim1985_bifurc_Lyap_vAlpha_' num2str(vAlpha(1)) 'a' num2str(vAlpha(end)) '.eps'];
-% evAlphal(sGraficoEPS);
+% Print
+% sGraficoEPS = ['print -depsc2 fig_bifurc_Lyap_vAlpha_' num2str(vAlpha(1)) 'a' num2str(vAlpha(end)) '.eps'];
+% eval(sGraficoEPS);
+
+% ----------------------------------------------------------------------- %
+
+hFig3 = figure( 'visible', 'on' );
+hax3 = axes( 'Parent', hFig3, 'FontSize', FontSize );
+
+box( hax3, 'on' );
+hold(hax3, 'all' );
+grid(hax3, 'off' );
+
+
+surf(mGridAlpha, mGridBeta, Mz_Lyap3);
+
+
+colormap jet;
+shading interp;
+view([0 90]);
+
+
+axis([ min(vAlpha) max(vAlpha) min(vBeta) max(vBeta) ]);
+
+
+hcb = colorbar;
+colorTitleHandle = get( hcb, 'Title' );
+titleString = '\lambda_{3}';
+set( colorTitleHandle , 'String', titleString, 'FontSize', 14 );
+
+
+xlabel( '$\alpha$', 'Interpreter', 'latex' );
+ylabel( '$\beta$', 'Interpreter', 'latex' );
+
+% ----------------------------------------------------------------------- %
+
+% Print
+% sGraficoEPS = ['print -depsc2 fig_bifurc_Lyap_vAlpha_' num2str(vAlpha(1)) 'a' num2str(vAlpha(end)) '.eps'];
+% eval(sGraficoEPS);
 
 % ======================================================================= %
+
 
 
 
